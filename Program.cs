@@ -1,29 +1,67 @@
-using System.Diagnostics;
 using System.Speech.Synthesis;
+using System.Runtime.Versioning;
+using FFMpegCore;
+using FFMpegCore.Extensions.Downloader;
+
+[assembly: SupportedOSPlatform("windows")]
 
 if (args.Length == 0)
 {
-    Console.WriteLine("Usage: AudioLabeler <folderPath> [ffmpegPath]");
-    Console.WriteLine("  <folderPath>  Folder containing audio files to process.");
-    Console.WriteLine("  [ffmpegPath] Optional path to ffmpeg.exe (defaults to 'ffmpeg' in PATH).");
+    Console.WriteLine("Usage: VoiceChapter <folderPath> [ffmpegPathOrFolder]");
+    Console.WriteLine("  <folderPath>          Folder containing audio files to process.");
+    Console.WriteLine("  [ffmpegPathOrFolder] Optional path to ffmpeg.exe or its folder.");
+    Console.WriteLine("                        If omitted, FFMpegCore will download ffmpeg automatically.");
     return;
 }
 
 var folderPath = args[0];
-var ffmpegPath = args.Length > 1 ? args[1] : "ffmpeg";
+var ffmpegArg = args.Length > 1 ? args[1] : null;
 
-// If an explicit path to ffmpeg.exe is provided, make sure it exists
-bool ffmpegIsExplicitPath =
-    ffmpegPath.Contains(Path.DirectorySeparatorChar) ||
-    ffmpegPath.Contains(Path.AltDirectorySeparatorChar) ||
-    ffmpegPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
-
-if (ffmpegIsExplicitPath && !File.Exists(ffmpegPath))
+// Configure ffmpeg: either use an explicit path/folder from the user,
+// or let FFMpegCore download and manage ffmpeg automatically.
+if (!string.IsNullOrWhiteSpace(ffmpegArg))
 {
-    Console.WriteLine($"ffmpeg not found at '{ffmpegPath}'.");
-    Console.WriteLine("Make sure the path points to ffmpeg.exe (often in a 'bin' subfolder).");
-    Console.WriteLine(@"Example: C:\\Soft\\ffmpeg\\bin\\ffmpeg.exe");
-    return;
+    var providedPath = ffmpegArg!;
+
+    if (File.Exists(providedPath))
+    {
+        // User passed a direct path to ffmpeg.exe
+        var binFolder = Path.GetDirectoryName(providedPath)!;
+        GlobalFFOptions.Configure(new FFOptions
+        {
+            BinaryFolder = binFolder,
+            TemporaryFilesFolder = Path.GetTempPath()
+        });
+    }
+    else if (Directory.Exists(providedPath))
+    {
+        // User passed a folder that should contain ffmpeg/ffprobe
+        GlobalFFOptions.Configure(new FFOptions
+        {
+            BinaryFolder = providedPath,
+            TemporaryFilesFolder = Path.GetTempPath()
+        });
+    }
+    else
+    {
+        Console.WriteLine($"ffmpeg path or folder not found: {providedPath}");
+        return;
+    }
+}
+else
+{
+    Console.WriteLine("No ffmpeg path provided. Downloading ffmpeg binaries via FFMpegCore...");
+
+    var autoBinaryFolder = Path.Combine(AppContext.BaseDirectory, "ffmpeg-binaries");
+    Directory.CreateDirectory(autoBinaryFolder);
+
+    GlobalFFOptions.Configure(new FFOptions
+    {
+        BinaryFolder = autoBinaryFolder,
+        TemporaryFilesFolder = Path.GetTempPath()
+    });
+
+    await FFMpegDownloader.DownloadBinaries(options: GlobalFFOptions.Current);
 }
 
 if (!Directory.Exists(folderPath))
@@ -69,39 +107,21 @@ foreach (var file in audioFiles)
         synthesizer.Speak(fileName);
         synthesizer.SetOutputToDefaultAudioDevice();
 
-        // 2) Use ffmpeg to concat label audio + original audio
-        Console.WriteLine("  Concatenating label with original using ffmpeg...");
+        // 2) Use FFMpegCore to concat label audio + original audio
+        Console.WriteLine("  Concatenating label with original using ffmpeg (via FFMpegCore)...");
 
-        // ffmpeg command:
+        // Equivalent to:
         // ffmpeg -y -i label.wav -i original.ext -filter_complex "[0:a][1:a]concat=n=2:v=0:a=1[a]" -map "[a]" output.ext
-        var psi = new ProcessStartInfo
-        {
-            FileName = ffmpegPath,
-            Arguments = $"-y -i \"{labelWavPath}\" -i \"{file}\" -filter_complex \"[0:a][1:a]concat=n=2:v=0:a=1[a]\" -map \"[a]\" \"{outputPath}\"",
-            UseShellExecute = false,
-            RedirectStandardOutput = false,
-            RedirectStandardError = false,
-            CreateNoWindow = true
-        };
-
-        var process = Process.Start(psi);                                                                                                                                                    
-        if (process == null)
-        {
-            Console.WriteLine("  Failed to start ffmpeg process.");
-        }
-        else
-        {
-            process.WaitForExit();
-
-            if (process.ExitCode != 0)
+        await FFMpegArguments
+            .FromFileInput(labelWavPath)
+            .AddFileInput(file)
+            .OutputToFile(outputPath, overwrite: true, options =>
             {
-                Console.WriteLine($"  ffmpeg failed with exit code {process.ExitCode}.");
-            }
-            else
-            {
-                Console.WriteLine($"  Done -> {Path.GetFileName(outputPath)}");
-            }
-        }
+                options.WithCustomArgument("-filter_complex \"[0:a][1:a]concat=n=2:v=0:a=1[a]\" -map \"[a]\"");
+            })
+            .ProcessAsynchronously();
+
+        Console.WriteLine($"  Done -> {Path.GetFileName(outputPath)}");
     }
     catch (Exception ex)
     {
