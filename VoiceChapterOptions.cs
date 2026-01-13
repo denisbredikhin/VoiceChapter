@@ -1,0 +1,1 @@
+internal sealed record VoiceChapterOptions(string FolderPath, string? FfmpegPathOrFolder);
