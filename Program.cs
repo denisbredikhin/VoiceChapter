@@ -34,6 +34,7 @@ using var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
     {
         services.AddSingleton(options);
+        services.AddSingleton<ITtsService, SpeechSynthesizerTtsService>();
         services.AddHostedService<VoiceChapterWorker>();
     })
     .Build();

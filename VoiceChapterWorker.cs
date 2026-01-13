@@ -1,15 +1,14 @@
-
-using System.Speech.Synthesis;
 using FFMpegCore;
 using FFMpegCore.Extensions.Downloader;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ILogger<VoiceChapterWorker> logger) : BackgroundService
+internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsService ttsService, ILogger<VoiceChapterWorker> logger) : BackgroundService
 {
     private static readonly string[] SupportedExtensions = [".wav", ".mp3", ".flac", ".m4a", ".ogg", ".aac"];
 
     private readonly VoiceChapterOptions _options = options;
+    private readonly ITtsService _ttsService = ttsService;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -137,8 +136,6 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ILogger<Vo
             logger.LogWarning(ex, "Could not analyze source audio with FFProbe.");
         }
 
-        using var synthesizer = new SpeechSynthesizer();
-
         foreach (var file in audioFiles)
         {
             stoppingToken.ThrowIfCancellationRequested();
@@ -155,9 +152,7 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ILogger<Vo
             try
             {
                 logger.LogInformation("  Generating spoken label...");
-                synthesizer.SetOutputToWaveFile(labelWavPath);
-                synthesizer.Speak(fileName);
-                synthesizer.SetOutputToDefaultAudioDevice();
+                await _ttsService.GenerateLabelAsync(fileName, labelWavPath, stoppingToken);
 
                 logger.LogInformation("  Concatenating label with original using ffmpeg (via FFMpegCore)...");
 
