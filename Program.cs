@@ -85,6 +85,38 @@ if (audioFiles.Count == 0)
 
 Console.WriteLine($"Found {audioFiles.Count} audio file(s) in {folderPath}.");
 
+// Probe the first file to approximate codec/bitrate settings for all outputs
+long? sourceBitRate = null;
+string? sourceCodecName = null;
+
+try
+{
+    var analysis = await FFProbe.AnalyseAsync(audioFiles[0]);
+    var audioStream = analysis.PrimaryAudioStream;
+
+    if (audioStream is not null)
+    {
+        if (audioStream.BitRate > 0)
+        {
+            sourceBitRate = audioStream.BitRate;
+        }
+
+        if (!string.IsNullOrWhiteSpace(audioStream.CodecName))
+        {
+            sourceCodecName = audioStream.CodecName;
+        }
+
+        Console.WriteLine("Detected source audio settings (from first file):");
+        Console.WriteLine($"  Codec:   {sourceCodecName ?? "unknown"}");
+        Console.WriteLine($"  Bitrate: {(sourceBitRate.HasValue ? sourceBitRate + " bps" : "unknown")}");
+        Console.WriteLine("  Sample:  unknown");
+    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Warning: could not analyze source audio with FFProbe: {ex.Message}");
+}
+
 using var synthesizer = new SpeechSynthesizer();
 
 foreach (var file in audioFiles)
@@ -117,7 +149,20 @@ foreach (var file in audioFiles)
             .AddFileInput(file)
             .OutputToFile(outputPath, overwrite: true, options =>
             {
-                options.WithCustomArgument("-filter_complex \"[0:a][1:a]concat=n=2:v=0:a=1[a]\" -map \"[a]\"");
+                var customArgs = "-filter_complex \"[0:a][1:a]concat=n=2:v=0:a=1[a]\" -map \"[a]\"";
+
+                if (!string.IsNullOrWhiteSpace(sourceCodecName))
+                {
+                    customArgs += $" -c:a {sourceCodecName}";
+                }
+
+                if (sourceBitRate.HasValue)
+                {
+                    // ffmpeg accepts bitrate in bits per second as an integer
+                    customArgs += $" -b:a {sourceBitRate.Value}";
+                }
+
+                options.WithCustomArgument(customArgs);
             })
             .ProcessAsynchronously();
 
