@@ -3,8 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-[assembly: SupportedOSPlatform("windows")]
-
 if (args.Length == 0)
 {
     Console.WriteLine("Usage: VoiceChapter <folderPath> [ffmpegPathOrFolder] [ttsProvider]");
