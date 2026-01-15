@@ -2,15 +2,15 @@ using FFMpegCore;
 using FFMpegCore.Extensions.Downloader;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using NickBuhro.Translit;
 
-internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsService ttsService, ILogger<VoiceChapterWorker> logger) : BackgroundService
+internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsService ttsService, ILogger<VoiceChapterWorker> logger, IHostApplicationLifetime appLifetime) : BackgroundService
 {
     private static readonly string[] SupportedExtensions = [".wav", ".mp3", ".flac", ".m4a", ".ogg", ".aac"];
 
     private readonly VoiceChapterOptions _options = options;
     private readonly ITtsService _ttsService = ttsService;
+    private readonly IHostApplicationLifetime _appLifetime = appLifetime;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -25,6 +25,10 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled exception during processing.");
+        }
+        finally
+        {
+            _appLifetime.StopApplication();
         }
     }
 
