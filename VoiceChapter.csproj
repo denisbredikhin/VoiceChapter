@@ -13,6 +13,7 @@
     <PackageReference Include="FFMpegCore.Extensions.Downloader" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.1" />
+    <PackageReference Include="PiperSharp" Version="1.0.6" />
   </ItemGroup>
 
 </Project>
