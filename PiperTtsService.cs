@@ -1,7 +1,7 @@
 using PiperSharp;
 ﻿using PiperSharp.Models;
 
-internal sealed class PiperTtsService : ITtsService
+internal sealed class PiperTtsService(VoiceChapterOptions options) : ITtsService
 {
     private PiperProvider? _provider;
     private async Task InitializeAsync()
@@ -10,21 +10,23 @@ internal sealed class PiperTtsService : ITtsService
         {
             return;
         }
-        const string ModelKey = "en_GB-alan-medium";
+
+        var modelKey = string.IsNullOrWhiteSpace(options.ModelKey)
+            ? "en_GB-alan-medium"
+            : options.ModelKey;
         if (!File.Exists(PiperDownloader.DefaultPiperExecutableLocation))
         {
             await PiperDownloader.DownloadPiper().ExtractPiper(PiperDownloader.DefaultLocation);
         }
-
-        var modelPath = Path.Join(PiperDownloader.DefaultModelLocation, ModelKey);
+        var modelPath = Path.Join(PiperDownloader.DefaultModelLocation, modelKey);
         VoiceModel? model = null;
         if (Directory.Exists(modelPath))
         {
-            model = await VoiceModel.LoadModelByKey(ModelKey);
+            model = await VoiceModel.LoadModelByKey(modelKey);
         }
         else
         {
-            model = await PiperDownloader.DownloadModelByKey(ModelKey);
+            model = await PiperDownloader.DownloadModelByKey(modelKey);
         }
 
         _provider = new PiperProvider(new PiperConfiguration()

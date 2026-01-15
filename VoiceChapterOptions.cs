@@ -4,4 +4,10 @@ internal enum TtsProvider
 	Piper
 }
 
-internal sealed record VoiceChapterOptions(string FolderPath, string? FfmpegPathOrFolder, TtsProvider TtsProvider);
+internal sealed record VoiceChapterOptions(
+	string FolderPath,
+	string? FfmpegPathOrFolder,
+	TtsProvider TtsProvider,
+	string ModelKey,
+    bool Transliterate
+);

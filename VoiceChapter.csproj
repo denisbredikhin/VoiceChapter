@@ -14,6 +14,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.1" />
     <PackageReference Include="PiperSharp" Version="1.0.6" />
+    <PackageReference Include="NickBuhro.Translit" Version="1.0.6" />
   </ItemGroup>
 
 </Project>

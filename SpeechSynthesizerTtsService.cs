@@ -1,6 +1,8 @@
+using System.Runtime.Versioning;
 using System.Speech.Synthesis;
 
 
+[SupportedOSPlatform("windows")]
 internal sealed class SpeechSynthesizerTtsService : ITtsService, IDisposable
 {
     private readonly SpeechSynthesizer _synthesizer = new();

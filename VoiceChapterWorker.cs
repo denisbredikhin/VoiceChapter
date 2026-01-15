@@ -152,7 +152,7 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
             try
             {
                 logger.LogInformation("  Generating spoken label...");
-                await _ttsService.GenerateLabelAsync(fileName, labelWavPath, stoppingToken);
+                await _ttsService.GenerateLabelAsync(baseName, labelWavPath, stoppingToken);
 
                 logger.LogInformation("  Concatenating label with original using ffmpeg (via FFMpegCore)...");
 
