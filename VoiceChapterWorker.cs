@@ -2,6 +2,8 @@ using FFMpegCore;
 using FFMpegCore.Extensions.Downloader;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using NickBuhro.Translit;
 
 internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsService ttsService, ILogger<VoiceChapterWorker> logger) : BackgroundService
 {
@@ -152,7 +154,10 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
             try
             {
                 logger.LogInformation("  Generating spoken label...");
-                await _ttsService.GenerateLabelAsync(baseName, labelWavPath, stoppingToken);
+                var label = baseName;
+                if (_options.Transliterate)
+                    label = Transliteration.LatinToCyrillyc(label);
+                await _ttsService.GenerateLabelAsync(label, labelWavPath, stoppingToken);
 
                 logger.LogInformation("  Concatenating label with original using ffmpeg (via FFMpegCore)...");
 

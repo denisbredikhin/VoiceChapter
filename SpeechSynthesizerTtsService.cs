@@ -10,7 +10,6 @@ internal sealed class SpeechSynthesizerTtsService : ITtsService, IDisposable
     public Task GenerateLabelAsync(string text, string outputWavePath, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
         _synthesizer.SetOutputToWaveFile(outputWavePath);
         _synthesizer.Speak(text);
         _synthesizer.SetOutputToDefaultAudioDevice();
