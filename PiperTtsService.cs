@@ -4,6 +4,7 @@ using PiperSharp;
 internal sealed class PiperTtsService(VoiceChapterOptions options) : ITtsService
 {
     private PiperProvider? _provider;
+    private string ModelKey => string.IsNullOrWhiteSpace(options.ModelKey) ? "en_GB-alan-medium" : options.ModelKey;
     private async Task InitializeAsync()
     {
         if (_provider != null)
@@ -11,9 +12,7 @@ internal sealed class PiperTtsService(VoiceChapterOptions options) : ITtsService
             return;
         }
 
-        var modelKey = string.IsNullOrWhiteSpace(options.ModelKey)
-            ? "en_GB-alan-medium"
-            : options.ModelKey;
+        var modelKey = ModelKey;
         if (!File.Exists(PiperDownloader.DefaultPiperExecutableLocation))
         {
             await PiperDownloader.DownloadPiper().ExtractPiper(PiperDownloader.DefaultLocation);
@@ -38,6 +37,7 @@ internal sealed class PiperTtsService(VoiceChapterOptions options) : ITtsService
 
     public async Task GenerateLabelAsync(string text, string outputWavePath, CancellationToken cancellationToken)
     {
+        Console.WriteLine($"  [TTS: Piper] Generating label '{text}' with model '{ModelKey}'");
         await InitializeAsync();
         var data = await _provider!.InferAsync(text, AudioOutputType.Wav, cancellationToken);
         var fs = File.OpenWrite(outputWavePath);

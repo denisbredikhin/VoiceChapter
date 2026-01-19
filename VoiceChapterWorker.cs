@@ -1,10 +1,9 @@
 using FFMpegCore;
 using FFMpegCore.Extensions.Downloader;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using NickBuhro.Translit;
 
-internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsService ttsService, ILogger<VoiceChapterWorker> logger, IHostApplicationLifetime appLifetime) : BackgroundService
+internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsService ttsService, IHostApplicationLifetime appLifetime) : BackgroundService
 {
     private static readonly string[] SupportedExtensions = [".wav", ".mp3", ".flac", ".m4a", ".ogg", ".aac"];
 
@@ -20,11 +19,11 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            logger.LogInformation("Processing cancelled.");
+            Console.WriteLine("Processing cancelled.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception during processing.");
+            Console.WriteLine($"Unhandled exception during processing: {ex}");
         }
         finally
         {
@@ -37,7 +36,7 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
         var folderPath = _options.FolderPath;
         var ffmpegArg = _options.FfmpegPathOrFolder;
 
-        logger.LogInformation("Starting VoiceChapter processing for folder: {FolderPath}", folderPath);
+        Console.WriteLine($"Starting VoiceChapter processing for folder: {folderPath}");
 
         // Configure ffmpeg: either use an explicit path/folder from the user,
         // or let FFMpegCore download and manage ffmpeg automatically.
@@ -54,7 +53,7 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
                     TemporaryFilesFolder = Path.GetTempPath()
                 });
 
-                logger.LogInformation("Using ffmpeg binaries from explicit file: {Path}", providedPath);
+                Console.WriteLine($"Using ffmpeg binaries from explicit file: {providedPath}");
             }
             else if (Directory.Exists(providedPath))
             {
@@ -64,17 +63,17 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
                     TemporaryFilesFolder = Path.GetTempPath()
                 });
 
-                logger.LogInformation("Using ffmpeg binaries from folder: {Folder}", providedPath);
+                Console.WriteLine($"Using ffmpeg binaries from folder: {providedPath}");
             }
             else
             {
-                logger.LogError("ffmpeg path or folder not found: {Path}", providedPath);
+                Console.WriteLine($"ffmpeg path or folder not found: {providedPath}");
                 return;
             }
         }
         else
         {
-            logger.LogInformation("No ffmpeg path provided. Downloading ffmpeg binaries via FFMpegCore...");
+            Console.WriteLine("No ffmpeg path provided. Downloading ffmpeg binaries via FFMpegCore...");
 
             var autoBinaryFolder = Path.Combine(AppContext.BaseDirectory, "ffmpeg-binaries");
             Directory.CreateDirectory(autoBinaryFolder);
@@ -87,12 +86,12 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
 
             await FFMpegDownloader.DownloadBinaries(options: GlobalFFOptions.Current);
 
-            logger.LogInformation("ffmpeg binaries downloaded to: {Folder}", autoBinaryFolder);
+            Console.WriteLine($"ffmpeg binaries downloaded to: {autoBinaryFolder}");
         }
 
         if (!Directory.Exists(folderPath))
         {
-            logger.LogError("Folder does not exist: {FolderPath}", folderPath);
+            Console.WriteLine($"Folder does not exist: {folderPath}");
             return;
         }
 
@@ -104,11 +103,11 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
 
         if (audioFiles.Count == 0)
         {
-            logger.LogWarning("No audio files found in the specified folder: {FolderPath}", folderPath);
+            Console.WriteLine($"No audio files found in the specified folder: {folderPath}");
             return;
         }
 
-        logger.LogInformation("Found {Count} audio file(s) in {FolderPath}.", audioFiles.Count, folderPath);
+        Console.WriteLine($"Found {audioFiles.Count} audio file(s) in {folderPath}.");
 
         // Probe the first file to approximate codec/bitrate settings for all outputs
         long? sourceBitRate = null;
@@ -131,15 +130,13 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
                     sourceCodecName = audioStream.CodecName;
                 }
 
-                logger.LogInformation(
-                    "Detected source audio settings (from first file) - Codec: {Codec}, Bitrate: {Bitrate} bps",
-                    sourceCodecName ?? "unknown",
-                    sourceBitRate?.ToString() ?? "unknown");
+                Console.WriteLine(
+                    $"Detected source audio settings (from first file) - Codec: {sourceCodecName ?? "unknown"}, Bitrate: {sourceBitRate?.ToString() ?? "unknown"} bps");
             }
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Could not analyze source audio with FFProbe.");
+            Console.WriteLine($"Could not analyze source audio with FFProbe: {ex}");
         }
 
         foreach (var file in audioFiles)
@@ -153,17 +150,16 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
             var labelWavPath = Path.Combine(dir, baseName + "_label_temp.wav");
             var outputPath = Path.Combine(dir, baseName + "_labeled" + Path.GetExtension(file));
 
-            logger.LogInformation("Processing: {FileName}", fileName);
+            Console.WriteLine($"Processing: {fileName}");
 
             try
             {
-                logger.LogInformation("  Generating spoken label...");
                 var label = baseName;
                 if (_options.Transliterate)
                     label = Transliteration.LatinToCyrillyc(label);
                 await _ttsService.GenerateLabelAsync(label, labelWavPath, stoppingToken);
 
-                logger.LogInformation("  Concatenating label with original using ffmpeg (via FFMpegCore)...");
+                Console.WriteLine("  Concatenating label with original using ffmpeg (via FFMpegCore)...");
 
                 await FFMpegArguments
                     .FromFileInput(labelWavPath)
@@ -191,11 +187,11 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
                         WorkingDirectory = GlobalFFOptions.Current.WorkingDirectory
                     });
 
-                logger.LogInformation("  Done -> {OutputFile}", Path.GetFileName(outputPath));
+                Console.WriteLine($"  Done -> {Path.GetFileName(outputPath)}");
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
-                logger.LogError(ex, "  Error while processing {FileName}.", fileName);
+                Console.WriteLine($"  Error while processing {fileName}: {ex}");
             }
             finally
             {
@@ -208,11 +204,11 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
                 }
                 catch (Exception ex)
                 {
-                    logger.LogDebug(ex, "Failed to delete temporary label file {TempFile}.", labelWavPath);
+                    Console.WriteLine($"Failed to delete temporary label file {labelWavPath}: {ex}");
                 }
             }
         }
 
-        logger.LogInformation("Processing finished.");
+        Console.WriteLine("Processing finished.");
     }
 }

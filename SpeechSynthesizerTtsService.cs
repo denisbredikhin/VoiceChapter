@@ -9,6 +9,7 @@ internal sealed class SpeechSynthesizerTtsService : ITtsService, IDisposable
 
     public Task GenerateLabelAsync(string text, string outputWavePath, CancellationToken cancellationToken)
     {
+        Console.WriteLine($"  [TTS: SpeechSynthesizer] Generating label '{text}'");
         cancellationToken.ThrowIfCancellationRequested();
         _synthesizer.SetOutputToWaveFile(outputWavePath);
         _synthesizer.Speak(text);

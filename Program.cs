@@ -25,14 +25,8 @@ var options = new VoiceChapterOptions(
 using var host = Host.CreateDefaultBuilder(args)
     .ConfigureLogging(logging =>
     {
+        // Disable all built-in logging (including Microsoft.Hosting.Lifetime messages)
         logging.ClearProviders();
-        logging.AddSimpleConsole(options =>
-        {
-            options.SingleLine = true;
-            options.TimestampFormat = "HH:mm:ss ";
-        });
-
-        logging.SetMinimumLevel(LogLevel.Information);
     })
     .ConfigureServices(services =>
     {
