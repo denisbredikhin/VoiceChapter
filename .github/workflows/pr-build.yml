@@ -19,7 +19,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore
-        run: dotnet restore VoiceChapter.csproj
+        run: dotnet restore src/VoiceChapter.csproj
 
       - name: Build
-        run: dotnet build VoiceChapter.csproj --configuration Release --no-restore
+        run: dotnet build src/VoiceChapter.csproj --configuration Release --no-restore
