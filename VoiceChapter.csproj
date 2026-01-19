@@ -29,7 +29,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="PiperSharp" Version="1.0.6" />
-    <PackageReference Include="NickBuhro.Translit" Version="1.1.3" />
+    <PackageReference Include="NickBuhro.Translit" Version="1.4.5" />
   </ItemGroup>
 
 </Project>
