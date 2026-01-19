@@ -1,67 +1,39 @@
 using System.Runtime.Versioning;
+using ConsoleAppFramework;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
-if (args.Length == 0)
-{
-    Console.WriteLine("Usage: VoiceChapter <folderPath> [ffmpegPathOrFolder] [ttsProvider] [modelKey]");
-    Console.WriteLine("  <folderPath>          Folder containing audio files to process.");
-    Console.WriteLine("  [ffmpegPathOrFolder] Optional path to ffmpeg.exe or its folder.");
-    Console.WriteLine("                        If omitted, FFMpegCore will download ffmpeg automatically.");
-    Console.WriteLine("  [ttsProvider]         Optional TTS engine: 'speech' (default) or 'piper'.");
-    Console.WriteLine("  [modelKey]            Optional Piper model key (default: en_GB-alan-medium).");
-    return;
-}
-
-var options = new VoiceChapterOptions(
-    FolderPath: args[0],
-    FfmpegPathOrFolder: args.Length > 1 ? args[1] : null,
-    TtsProvider: ParseTtsProvider(args.Length > 2 ? args[2] : null),
-    ModelKey: ParseModelKey(args.Length > 3 ? args[3] : null),
-    Transliterate: args.Any(a => a.StartsWith("--translit", StringComparison.OrdinalIgnoreCase))
-);
-
-using var host = Host.CreateDefaultBuilder(args)
-    .ConfigureLogging(logging =>
+var app = ConsoleApp.Create()
+    .ConfigureServices((_, services) =>
     {
-        // Disable all built-in logging (including Microsoft.Hosting.Lifetime messages)
-        logging.ClearProviders();
-    })
-    .ConfigureServices(services =>
-    {
-        services.AddSingleton(options);
-        if (options.TtsProvider == TtsProvider.Piper)
+        services.AddSingleton<SpeechSynthesizerTtsService>();
+        services.AddSingleton<PiperTtsService>();
+        services.AddSingleton<ITtsService>(sp =>
         {
-            services.AddSingleton<ITtsService, PiperTtsService>();
-        }
-        else
-        {
-            services.AddSingleton<ITtsService, SpeechSynthesizerTtsService>();
-        }
-        services.AddHostedService<VoiceChapterWorker>();
-    })
-    .Build();
+            // Default ITtsService; actual engine is selected per-run in the worker based on options.
+            return sp.GetRequiredService<SpeechSynthesizerTtsService>();
+        });
+        services.AddSingleton<VoiceChapterWorker>();
+    });
 
-await host.RunAsync();
-
-static TtsProvider ParseTtsProvider(string? value)
+// Root command: processes a folder of audio files with optional ffmpeg path, TTS provider, model key, and transliteration.
+app.Add("", async Task (
+    [FromServices] VoiceChapterWorker worker,
+    string folder,
+    string? ffmpeg = null,
+    TtsProvider provider = TtsProvider.Speech,
+    string modelKey = "en_GB-alan-medium",
+    bool transliterate = false,
+    CancellationToken cancellationToken = default) =>
 {
-    if (string.IsNullOrWhiteSpace(value))
-    {
-        return TtsProvider.Speech;
-    }
+    var options = new VoiceChapterOptions(
+        FolderPath: folder,
+        FfmpegPathOrFolder: ffmpeg,
+        TtsProvider: provider,
+        ModelKey: modelKey,
+        Transliterate: transliterate
+    );
 
-    return value.Trim().ToLowerInvariant() switch
-    {
-        "piper" => TtsProvider.Piper,
-        "speech" => TtsProvider.Speech,
-        _ => TtsProvider.Speech
-    };
-}
+    await worker.RunAsync(options, cancellationToken);
+});
 
-static string ParseModelKey(string? value)
-{
-    const string DefaultModelKey = "en_GB-alan-medium";
-    return string.IsNullOrWhiteSpace(value) ? DefaultModelKey : value.Trim();
-}
+await app.RunAsync(args);

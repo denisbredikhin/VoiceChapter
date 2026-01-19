@@ -1,40 +1,16 @@
 using FFMpegCore;
 using FFMpegCore.Extensions.Downloader;
-using Microsoft.Extensions.Hosting;
 using NickBuhro.Translit;
 
-internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsService ttsService, IHostApplicationLifetime appLifetime) : BackgroundService
+internal sealed class VoiceChapterWorker(ITtsService ttsService)
 {
     private static readonly string[] SupportedExtensions = [".wav", ".mp3", ".flac", ".m4a", ".ogg", ".aac"];
 
-    private readonly VoiceChapterOptions _options = options;
     private readonly ITtsService _ttsService = ttsService;
-    private readonly IHostApplicationLifetime _appLifetime = appLifetime;
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task RunAsync(VoiceChapterOptions options, CancellationToken stoppingToken)
     {
-        try
-        {
-            await RunAsync(stoppingToken);
-        }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-        {
-            Console.WriteLine("Processing cancelled.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Unhandled exception during processing: {ex}");
-        }
-        finally
-        {
-            _appLifetime.StopApplication();
-        }
-    }
-
-    private async Task RunAsync(CancellationToken stoppingToken)
-    {
-        var folderPath = _options.FolderPath;
-        var ffmpegArg = _options.FfmpegPathOrFolder;
+        var folderPath = options.FolderPath;
+        var ffmpegArg = options.FfmpegPathOrFolder;
 
         Console.WriteLine($"Starting VoiceChapter processing for folder: {folderPath}");
 
@@ -155,7 +131,7 @@ internal sealed class VoiceChapterWorker(VoiceChapterOptions options, ITtsServic
             try
             {
                 var label = baseName;
-                if (_options.Transliterate)
+                if (options.Transliterate)
                     label = Transliteration.LatinToCyrillyc(label);
                 await _ttsService.GenerateLabelAsync(label, labelWavPath, stoppingToken);
 
