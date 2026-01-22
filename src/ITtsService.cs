@@ -1,4 +1,8 @@
 internal interface ITtsService
 {
-    Task GenerateLabelAsync(string text, string outputWavePath, CancellationToken cancellationToken);
+    Task GenerateLabelAsync(
+        VoiceChapterOptions options,
+        string text, 
+        string outputWavePath, 
+        CancellationToken cancellationToken);
 }

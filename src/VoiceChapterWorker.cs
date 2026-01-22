@@ -1,12 +1,12 @@
 using FFMpegCore;
 using FFMpegCore.Extensions.Downloader;
+using Microsoft.Extensions.DependencyInjection;
 using NickBuhro.Translit;
 
-internal sealed class VoiceChapterWorker(ITtsService ttsService)
+internal sealed class VoiceChapterWorker(IServiceProvider serviceProvicer)
 {
     private static readonly string[] SupportedExtensions = [".wav", ".mp3", ".flac", ".m4a", ".ogg", ".aac"];
 
-    private readonly ITtsService _ttsService = ttsService;
     public async Task RunAsync(VoiceChapterOptions options, CancellationToken stoppingToken)
     {
         var folderPath = options.FolderPath;
@@ -132,8 +132,9 @@ internal sealed class VoiceChapterWorker(ITtsService ttsService)
             {
                 var label = baseName;
                 if (options.Transliterate)
-                    label = Transliteration.LatinToCyrillyc(label);
-                await _ttsService.GenerateLabelAsync(label, labelWavPath, stoppingToken);
+                    label = Transliteration.LatinToCyrillyc(label, Language.Russian);
+                var service = serviceProvicer.GetRequiredKeyedService<ITtsService>(options.TtsProvider);
+                await service.GenerateLabelAsync(options, label, labelWavPath, stoppingToken);
 
                 Console.WriteLine("  Concatenating label with original using ffmpeg (via FFMpegCore)...");
 

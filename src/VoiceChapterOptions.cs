@@ -1,13 +1,8 @@
-internal enum TtsProvider
-{
-	Speech,
-	Piper
-}
-
 internal sealed record VoiceChapterOptions(
 	string FolderPath,
 	string? FfmpegPathOrFolder,
-	TtsProvider TtsProvider,
+	string TtsProvider,
 	string ModelKey,
-    bool Transliterate
+    bool Transliterate,
+	int Rate
 );

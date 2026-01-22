@@ -1,4 +1,11 @@
+﻿/obj
 /bin
-/obj
+/src/.vs/
+/src/bin/
+/src/obj/
 /models
 /piper
+/src/models
+/src/piper
+/src/Properties/launchSettings.json
+/src/Visual Studio 18/Visualizers
