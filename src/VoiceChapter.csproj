@@ -18,12 +18,15 @@
     <Description>Process audio files in a folder, prepending spoken labels.</Description>
     <PackageTags>audio;processing;tool</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RollForward>Major</RollForward>
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild> 
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+
     <PackageReference Include="System.Speech" Version="6.0.0" />
     <PackageReference Include="FFMpegCore" Version="5.4.0" />
     <PackageReference Include="FFMpegCore.Extensions.Downloader" Version="5.0.0" />
