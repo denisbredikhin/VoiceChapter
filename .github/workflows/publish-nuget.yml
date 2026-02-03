@@ -7,10 +7,9 @@ on:
 
 jobs:
   build-and-publish:
+    permissions:
+      id-token: write
     runs-on: ubuntu-latest
-
-    env:
-      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
     steps:
       - name: Checkout
@@ -30,6 +29,12 @@ jobs:
       - name: Pack
         run: dotnet pack src/VoiceChapter.csproj --configuration Release --no-build -o ./artifacts
 
+        # Get a short-lived NuGet API key
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: denisbredikhin # Recommended: use a secret like ${{ secrets.NUGET_USER }} for your nuget.org username (profile name), NOT your email address
+    
       - name: Publish to NuGet
-        if: env.NUGET_API_KEY != ''
-        run: dotnet nuget push "artifacts/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate
+        run: dotnet nuget push "artifacts/*.nupkg" --source https://api.nuget.org/v3/index.json ${{steps.login.outputs.NUGET_API_KEY}}

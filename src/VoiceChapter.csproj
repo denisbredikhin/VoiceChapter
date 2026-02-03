@@ -8,7 +8,7 @@
 
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>voice-chapter</ToolCommandName>
-    <PackageId>voice-chapter</PackageId>
+    <PackageId>VoiceChapter</PackageId>
     <PackageVersion>0.1.0</PackageVersion>
     <Authors>Denis Bredikhin</Authors>
     <Description>Process audio files in a folder, prepending spoken labels.</Description>
