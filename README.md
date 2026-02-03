@@ -6,6 +6,14 @@ The tool can use either the built-in Windows `System.Speech` engine or the cross
 
 ---
 
+## Example Use Case
+
+Some headphones and portable players have internal storage where you can copy audiobook chapters as separate audio files. However, these devices do not always respect the file order when playing back, so it can be hard to know which chapter is next.
+
+By running `voice-chapter` on your audiobook folder before copying the files, each chapter gets a short spoken label at the beginning (for example, "chapter 01", "chapter 02", and so on). Even if the device shuffles or plays files out of order, you can immediately hear which chapter is playing and easily skip forward or back to find the next one.
+
+---
+
 ## Installation
 
 ### Prerequisites
@@ -16,16 +24,16 @@ The tool can use either the built-in Windows `System.Speech` engine or the cross
 
 ### Install as a global .NET tool
 
-Once the package is published to NuGet.org (with package ID `voice-chapter`), install it as a global tool:
+Once the package is published to NuGet.org (with package ID `VoiceChapter`), install it as a global tool:
 
 ```bash
-dotnet tool install -g voice-chapter
+dotnet tool install -g VoiceChapter 
 ```
 
 To update to the latest version:
 
 ```bash
-dotnet tool update -g voice-chapter
+dotnet tool update -g VoiceChapter
 ```
 
 After installation, the command `voice-chapter` will be available on your PATH.
@@ -62,7 +70,8 @@ voice-chapter --folder <string> \
               [--ffmpeg <string>] \
               [--provider <Speech|Piper>] \
               [--model-key <string>] \
-              [--transliterate <true|false>]
+              [--transliterate <true|false>] \
+              [--rate <-10..10>]
 ```
 
 In detail:
@@ -151,6 +160,25 @@ voice-chapter --folder "C:\Audiobooks\Book1" --transliterate true
 ```
 
 > Note: Transliteration is useful if your file names are in Latin script but you want the spoken labels to use Cyrillic.
+
+### `--rate` (optional)
+
+**Short alias:** `-r`
+
+Controls the speaking rate used when generating the spoken label.
+
+- Range: from `-10` (slowest) to `10` (fastest)
+- Default: `0` (normal speaking rate)
+
+Example:
+
+```bash
+# Slightly slower labels
+voice-chapter --folder "C:\Audiobooks\Book1" --rate -2
+
+# Faster labels
+voice-chapter --folder "C:\Audiobooks\Book1" --rate 5
+```
 
 ---
 
